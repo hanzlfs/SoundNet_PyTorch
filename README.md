@@ -1,4 +1,4 @@
-# SoundNet_PyTorch
+# SoundNet with PyTorch
 PyTorch implementation for SoundNet [paper link](http://web.mit.edu/vondrick/soundnet.pdf).[1]
 SoundNet is a model to classify sounds using transfer learning with visual knowledges on large size of unlabeled videos.
 
