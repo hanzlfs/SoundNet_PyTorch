@@ -35,9 +35,12 @@ torch.manual_seed(0)
 torch.set_num_threads(1)
 torch.set_default_tensor_type('torch.FloatTensor')
 
+global parameters, gradParameters
+
 #### Create data loader
 
 ##### create net work
+
 ## initialize the model
 def weights_init(layer):
     name = torch.typename(layer)
@@ -83,6 +86,26 @@ def create_network():
     net.add(nn.FlattenTable())
     return net
 
+## -- optimization closure
+## the optimizer will call this function to get the gradients
+def fx(x):
+    gradParameters = gradParameters.zero_()
+    ## data_im,data_label,data_label2,data_extra = data:getBatch()
+    inputTensor.copy_(data_im.view(opt['batchSize'], 1, opt['fineSize'], 1))
+    for i in xrange(opt['label_time_steps']):
+        labels[i] = data_label.select(2, i) #labels[i]:copy(data_label:select(3,i)) 
+
+    for i in xrange(opt['label_time_steps']):
+        labels[opt['label_time_steps']  - 1 + i] = data_label2.select(2, i)
+    
+    output = net.forward(inputTensor)
+    err = criterion.forward(output, labels) / float(len(labels)) * opt['lambda']
+    df_do = criterion.backward(output, labels)
+    for i in range(len(labels)):
+        df_do.mul(opt['lambda'] / len(labels))
+    net.backward(inputTensor, df_do)
+    return err, gradParameters # todo : Test this method
+
 def main():
     if opt['gpu'] >= 0 :
         torch.cuda.set_device(opt['gpu'])
@@ -105,7 +128,7 @@ def main():
     criterion = nn.ParallelCriterion(False)
     for i in range(8):
         criterion.add(nn.DistKLDivCriterion())
-    inputs = torch.Tensor(opt['batchSize'], 1, opt['fineSize'], 1)
+    inputs = torch.Tensor(opt['batchSize'], 1, opt['fineSize'], 1).double()
     labels = {}
     for i in range(opt['label_time_steps']):
         labels[i] = torch.Tensor(opt['batchSize'], 1000)
@@ -126,4 +149,5 @@ def main():
 
     """
     parameters, gradParameters = net.flattenParameters()
+    counter, history = 0, {}
     
