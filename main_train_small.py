@@ -88,7 +88,7 @@ def create_network():
 
 ## -- optimization closure
 ## the optimizer will call this function to get the gradients
-def fx(x):
+def closure(x):
     gradParameters = gradParameters.zero_()
     ## data_im,data_label,data_label2,data_extra = data:getBatch()
     inputTensor.copy_(data_im.view(opt['batchSize'], 1, opt['fineSize'], 1))
