@@ -1,6 +1,7 @@
-from torch.legacy import nn
+from torch.legacy import nn, optim
 from torch.utils.serialization import load_lua
 import torch
+import gc
 opt = {
   'dataset' : 'audio',    # indicates what dataset load to use (in data.lua)
   'nThreads' : 40,        # how many threads to pre-fetch data
@@ -35,7 +36,7 @@ torch.manual_seed(0)
 torch.set_num_threads(1)
 torch.set_default_tensor_type('torch.FloatTensor')
 
-global parameters, gradParameters
+
 
 #### Create data loader
 
@@ -89,6 +90,7 @@ def create_network():
 ## -- optimization closure
 ## the optimizer will call this function to get the gradients
 def closure(x):
+    global gradParameters
     gradParameters = gradParameters.zero_()
     ## data_im,data_label,data_label2,data_extra = data:getBatch()
     inputTensor.copy_(data_im.view(opt['batchSize'], 1, opt['fineSize'], 1))
@@ -149,5 +151,19 @@ def main():
 
     """
     parameters, gradParameters = net.flattenParameters()
-    counter, history = 0, {}
+    optimConfig = {
+    'learningRate':opt['lr'],
+    'beta1':opt['beta1']
+    }
     
+    counter, history = 0, {}
+    for epoch in range(opt['niter']):
+        for i in range(0, min(data.size(), opt['ntrain']), opt['batchSize']):
+            gc.collect()
+            optim.adam(closure, parameters, config = optimConfig)
+            
+            ## logging
+            if counter % 10 == 0 :
+                w = net.modules[1].weight.clone().float().squeeze()
+            counter += 1
+            print "-"*10
