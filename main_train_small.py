@@ -125,5 +125,5 @@ def main():
     end
 
     """
-    parameters, gradParameters = net.parameters()
+    parameters, gradParameters = net.flattenParameters()
     
